@@ -5,7 +5,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     neuralNetwork = new NeuralNetwork(784,     100,     10      );
-                                   // входные  скрытые  выходные
+        // входные  скрытые  выходные
 
 
     // настройка интерфейса
@@ -85,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent)
     fileMenu = menuBar->addMenu("Файл");
     openWeightsAction = fileMenu->addAction("Открыть веса");
     saveWeightsAction = fileMenu->addAction("Сохранить веса");
+    activationMenu = menuBar->addMenu("Функция активации");
     fileMenu->addSeparator();
     trainNetworkAction = fileMenu->addAction("Обучить нейросеть (*.csv)");
 
@@ -95,6 +96,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(openWeightsAction, &QAction::triggered, this, &MainWindow::openWeights);
     connect(saveWeightsAction, &QAction::triggered, this, &MainWindow::saveWeights);
     connect(trainNetworkAction, &QAction::triggered, this, &MainWindow::trainNetwork);
+
+    createActivationMenu();
+    connect(activationGroup, &QActionGroup::triggered, this, &MainWindow::updateActivationFunction);
 }
 
 void MainWindow::processImage()
@@ -144,11 +148,15 @@ void MainWindow::trainNetwork()
         QVBoxLayout *layout = new QVBoxLayout(progressDialog);
 
         QLabel *infoLabel = new QLabel("Загрузка...", progressDialog);
+        infoLabel->setWordWrap(true); // Включаем перенос слов
         layout->addWidget(infoLabel);
 
         QProgressBar *progressBar = new QProgressBar(progressDialog);
-        progressBar->setRange(0, 100); // Пример: установите максимальное значение в соответствии с вашими данными
+        progressBar->setRange(0, 100);
         layout->addWidget(progressBar);
+
+        // Установка минимального размера для окна
+        progressDialog->setMinimumSize(300, 150);
 
         progressDialog->setModal(false);
         progressDialog->show();
@@ -186,7 +194,7 @@ void MainWindow::trainNetwork()
                     readedData.append(values.at(i).toDouble() / 255.0); // Нормализация
                 }
 
-                neuralNetwork->train(correctNum, readedData);
+                neuralNetwork->train(correctNum, readedData, currentActivationFunction);
 
                 // Обновление прогрессбара
                 processedLines++;
@@ -317,6 +325,28 @@ void MainWindow::openWeights()
         } else {
             QMessageBox::warning(this, "Ошибка", "Не удалось открыть файл для чтения.");
         }
+    }
+}
+
+void MainWindow::createActivationMenu() {
+    activationGroup = new QActionGroup(this);
+    activationGroup->setExclusive(true);
+
+    QAction *sigmoidAction = activationMenu->addAction("Сигмоида");
+    sigmoidAction->setCheckable(true);
+    sigmoidAction->setChecked(true); // По умолчанию выбрана сигмоида
+    activationGroup->addAction(sigmoidAction);
+
+    QAction *reluAction = activationMenu->addAction("ReLU");
+    reluAction->setCheckable(true);
+    activationGroup->addAction(reluAction);
+}
+
+void MainWindow::updateActivationFunction(QAction *action) {
+    if (action->text() == "Сигмоида") {
+        NeuralNetwork::currentActivationFunction = NeuralNetwork::ActivationFunction::Sigmoid; // Обратитесь к статической переменной через имя класса
+    } else if (action->text() == "ReLU") {
+        NeuralNetwork::currentActivationFunction = NeuralNetwork::ActivationFunction::ReLU; // Обратитесь к статической переменной через имя класса
     }
 }
 

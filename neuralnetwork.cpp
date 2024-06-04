@@ -1,5 +1,7 @@
 #include "neuralnetwork.h"
 
+NeuralNetwork::ActivationFunction NeuralNetwork::currentActivationFunction = NeuralNetwork::ActivationFunction::Sigmoid;
+
 NeuralNetwork::NeuralNetwork(int inputNum, int hiddenNum, int outputNum)
 {
     sizeInput = inputNum;
@@ -61,12 +63,12 @@ QVector<double> NeuralNetwork::process(QVector<double> input)
     return neuronsOutput;
 }
 
-void NeuralNetwork::train(int correctNum, QVector<double> correctImage)
+void NeuralNetwork::train(int correctNum, QVector<double> correctImage, ActivationFunction activation)
 {
     feedForward(correctImage);
     QVector<double> correctOutput(sizeOutput, 0.0);
     correctOutput[correctNum] = 1.0;
-    backPropagation(correctOutput);
+    backPropagation(correctOutput, activation);
 }
 
 QVector<int> NeuralNetwork::getSizes()
@@ -94,7 +96,7 @@ QVector<double> &NeuralNetwork::getBiasesOutput()
     return biasesOutput;
 }
 
-double NeuralNetwork::sigmoid(double x, bool isDerivative=false)
+double NeuralNetwork::sigmoid(double x, bool isDerivative)
 {
     if (!isDerivative) return 1 / (1 + qExp(-x));
 
@@ -102,17 +104,20 @@ double NeuralNetwork::sigmoid(double x, bool isDerivative=false)
     return sig * (1 - sig);
 }
 
-double NeuralNetwork::ReLU(double x, bool isDerivative=false)
+double NeuralNetwork::ReLU(double x, bool isDerivative)
 {
     if (!isDerivative) return qMax(0.0, x);
 
     return (x > 0)? 1:0;
 }
 
-double NeuralNetwork::activationFunction(double x, bool isDerivative=false)
+double NeuralNetwork::activationFunction(double x, bool isDerivative)
 {
-    return sigmoid(x, isDerivative);
-    // return ReLU(x, isDerivative);
+    if (currentActivationFunction == ActivationFunction::Sigmoid) {
+        return sigmoid(x, isDerivative);
+    } else {
+        return ReLU(x, isDerivative);
+    }
 }
 
 void NeuralNetwork::feedForward(QVector<double> input)
@@ -145,7 +150,7 @@ void NeuralNetwork::feedForward(QVector<double> input)
     }
 }
 
-void NeuralNetwork::backPropagation(QVector<double> targetOutput)
+void NeuralNetwork::backPropagation(QVector<double> targetOutput, ActivationFunction activation)
 {
     double learningRate = 0.1;
 

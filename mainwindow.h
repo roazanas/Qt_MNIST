@@ -14,6 +14,7 @@
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
+#include <QActionGroup>
 
 #include <QPainter>
 #include <QPen>
@@ -66,6 +67,9 @@ private:
     QMenu* fileMenu;
     QAction* openWeightsAction;
     QAction* saveWeightsAction;
+    QMenu* activationMenu; // Добавьте это
+    QActionGroup* activationGroup; // И это
+    NeuralNetwork::ActivationFunction currentActivationFunction = NeuralNetwork::ActivationFunction::Sigmoid;
     QAction* trainNetworkAction;
 
 
@@ -86,5 +90,7 @@ private slots:
     void openWeights();
     void saveWeights();
     void trainNetwork();
+    void createActivationMenu();
+    void updateActivationFunction(QAction *action);
 };
 #endif // MAINWINDOW_H

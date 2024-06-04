@@ -20,6 +20,7 @@ class NeuralNetwork : public QObject
 public:
     NeuralNetwork(int inputNum, int hiddenNum, int outputNum);
     QVector<double> process(QVector<double> input);                 // сделать предсказание
+    enum class ActivationFunction { Sigmoid, ReLU };
     void train(int correctNum, QVector<double> correctImage);       // общая функция обучения
 
     QVector<int> getSizes();
@@ -27,6 +28,8 @@ public:
     QVector<QVector<double>> &getWeightsHidToOut();
     QVector<double> &getBiasesHidden();
     QVector<double> &getBiasesOutput();
+
+    static ActivationFunction currentActivationFunction; // Сделайте переменную статической
 
 private:
     int sizeInput, sizeHidden, sizeOutput;                          // количества нейронов
@@ -40,11 +43,11 @@ private:
 
     QVector<double> biasesHidden;                                   // смещения скрытых
     QVector<double> biasesOutput;                                   // смещения выходных
+    // ActivationFunction currentActivationFunction;  // Удалите объявление здесь
 
-
-    double sigmoid(double x, bool isDerivative);                    // функция активации
-    double ReLU(double x, bool isDerivative);                       // функция активации (более актуальна)
-    double activationFunction(double x, bool isDerivative);
+    double sigmoid(double x, bool isDerivative = false);                    // функция активации
+    double ReLU(double x, bool isDerivative = false);
+    double activationFunction(double x, bool isDerivative = false);
 
     void feedForward(QVector<double> input);                        // функция прямого распространения
     void backPropagation(QVector<double> targetOutput);             // функция обратного распространения
