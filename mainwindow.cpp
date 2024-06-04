@@ -68,6 +68,8 @@ MainWindow::MainWindow(QWidget *parent)
     paintWidget = new PaintWidget();
     VGroup3 = new QVBoxLayout();
     clearButton = new QPushButton("Очистить");
+    calculateErrorButton = new QPushButton("Процент ошибки");
+    VGroup3->addWidget(calculateErrorButton);
     VSpacer3 = new QSpacerItem(10, 10, QSizePolicy::Maximum, QSizePolicy::Maximum);
     VGroup3->addItem(VSpacer3);
     VGroup3->addWidget(paintWidget);
@@ -91,6 +93,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // сигналы
     connect(clearButton, &QPushButton::clicked, this, &MainWindow::resetResults);
+    connect(calculateErrorButton, &QPushButton::clicked, this, &MainWindow::calculateErrorPercentage);
     connect(paintWidget, &PaintWidget::imageUpdated, this, &MainWindow::processImage);
 
     connect(openWeightsAction, &QAction::triggered, this, &MainWindow::openWeights);
@@ -366,6 +369,94 @@ void MainWindow::updateActivationFunction(QAction *action) {
     } else if (action->text() == "ReLU") {
         NeuralNetwork::currentActivationFunction = NeuralNetwork::ActivationFunction::ReLU; // Обратитесь к статической переменной через имя класса
     }
+}
+
+void MainWindow::calculateErrorPercentage()
+{
+    // Открываем диалог выбора файла для проверки
+    QString filePath = QFileDialog::getOpenFileName(this,
+                                                    tr("Выбрать файл для проверки"),
+                                                    "",
+                                                    tr("Файлы данных с разделителями-запятыми (*.csv)"));
+
+    if (filePath.isEmpty()) {
+        return; // Пользователь не выбрал файл
+    }
+
+    // Создаем информационное окно с прогрессбаром
+    QDialog *progressDialog = new QDialog(this);
+    progressDialog->setWindowTitle("Проверка нейросети");
+    QVBoxLayout *layout = new QVBoxLayout(progressDialog);
+
+    QLabel *infoLabel = new QLabel("Проверка...", progressDialog);
+    infoLabel->setAlignment(Qt::AlignCenter);
+    infoLabel->setFont(QFont("Segoe UI", 10));
+    infoLabel->setWordWrap(true); // Включаем перенос слов
+    layout->addWidget(infoLabel);
+
+    QProgressBar *progressBar = new QProgressBar(progressDialog);
+    progressBar->setRange(0, 100);
+    layout->addWidget(progressBar);
+
+    progressDialog->setMinimumSize(300, 150); // Минимальный размер окна
+    progressDialog->setModal(false); // Не блокируем главное окно
+    progressDialog->show();
+    progressBar->setValue(0);
+    QApplication::processEvents(); // Обрабатываем события, чтобы окно обновилось
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Ошибка", "Не удалось открыть файл для чтения.");
+        progressDialog->close();
+        return;
+    }
+
+    QTextStream in(&file);
+    in.readLine(); // Пропускаем заголовок
+
+    int totalLines = 0;
+    int errors = 0;
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        if (line.isEmpty()) {
+            continue;
+        }
+
+        totalLines++;
+        QStringList values = line.split(",");
+        int correctNum = values.at(0).toInt();
+
+        QVector<double> inputData;
+        for (int i = 1; i < values.size(); ++i) {
+            inputData.append(values.at(i).toDouble() / 255.0);
+        }
+
+        QVector<double> output = neuralNetwork->process(inputData);
+        double maxVal = 0;
+        int predictedNum = 0;
+        for (int i = 0; i < output.size(); ++i) {
+            if (output[i] > maxVal) {
+                maxVal = output[i];
+                predictedNum = i;
+            }
+        }
+
+        if (predictedNum != correctNum) {
+            errors++;
+        }
+
+        // Обновляем прогрессбар
+        int progress = (int)((double)errors / totalLines * 100); // Исправлено: деление на totalLines
+        infoLabel->setText(QString("%1 ошибок на %2 строк уже найдено").arg(errors).arg(totalLines));
+        progressBar->setValue(progress);
+        QApplication::processEvents(); // Обрабатываем события, чтобы прогрессбар обновился
+    }
+
+    file.close();
+    progressDialog->close(); // Закрываем информационное окно
+
+    double errorPercentage = (double)errors / totalLines * 100;
+    QMessageBox::information(this, "Результат", QString("Процент ошибки: %1%").arg(errorPercentage));
 }
 
 MainWindow::~MainWindow()

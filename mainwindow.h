@@ -23,6 +23,7 @@
 #include <QDebug>
 #include <QImage>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QFile>
 #include <QTextStream>
 #include <QBuffer>
@@ -58,6 +59,7 @@ private:
     QGroupBox *groupBox3;
     PaintWidget *paintWidget;
     QPushButton *clearButton;
+    QPushButton *calculateErrorButton;
     QSpacerItem *VSpacer0;
     QSpacerItem *VSpacer1;
     QSpacerItem *VSpacer2;
@@ -92,5 +94,6 @@ private slots:
     void trainNetwork();
     void createActivationMenu();
     void updateActivationFunction(QAction *action);
+    void calculateErrorPercentage();
 };
 #endif // MAINWINDOW_H
