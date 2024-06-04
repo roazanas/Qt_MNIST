@@ -1,11 +1,11 @@
 #include "mainwindow.h"
-
+#include "trainingthread.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     neuralNetwork = new NeuralNetwork(784,     100,     10      );
-        // входные  скрытые  выходные
+                                   // входные  скрытые  выходные
 
 
     // настройка интерфейса
@@ -135,19 +135,23 @@ void MainWindow::resetResults()
 
 void MainWindow::trainNetwork()
 {
+    // Открываем диалог выбора файла для обучения
     QString filePath = QFileDialog::getOpenFileName(this,
                                                     tr("Выбрать файл для обучения"),
                                                     "",
                                                     tr("Файлы данных с разделителями-запятыми (*.csv)"));
 
+    // Если файл выбран
     if (!filePath.isEmpty())
     {
-        // Создание информационного окна
+        // Создаем информационное окно с прогрессбаром
         QDialog *progressDialog = new QDialog(this);
         progressDialog->setWindowTitle("Обучение нейросети");
         QVBoxLayout *layout = new QVBoxLayout(progressDialog);
 
         QLabel *infoLabel = new QLabel("Загрузка...", progressDialog);
+        infoLabel->setAlignment(Qt::AlignCenter);
+        infoLabel->setFont(QFont("Segoe UI", 10));
         infoLabel->setWordWrap(true); // Включаем перенос слов
         layout->addWidget(infoLabel);
 
@@ -155,58 +159,72 @@ void MainWindow::trainNetwork()
         progressBar->setRange(0, 100);
         layout->addWidget(progressBar);
 
-        // Установка минимального размера для окна
-        progressDialog->setMinimumSize(300, 150);
-
-        progressDialog->setModal(false);
+        progressDialog->setMinimumSize(300, 150); // Минимальный размер окна
+        progressDialog->setModal(false); // Не блокируем главное окно
         progressDialog->show();
         progressBar->setValue(0);
-        QApplication::processEvents();
+        QApplication::processEvents(); // Обрабатываем события, чтобы окно обновилось
 
+        // Открываем файл для чтения
         QFile file(filePath);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream in(&file);
 
-            // Пропуск первой строки (заголовка)
+            // Пропускаем первую строку (заголовок)
             in.readLine();
 
-            // Подсчет строк для прогрессбара (можно оптимизировать)
+            // Подсчитываем количество строк для прогрессбара
             int totalLines = 0;
-            while (!in.atEnd())
-            {
+            while (!in.atEnd()) {
                 QString line = in.readLine();
                 if (!line.isEmpty()) totalLines++;
             }
-            file.seek(0); // Возврат указателя файла в начало
-            in.readLine(); // Снова пропустить заголовок
+            file.seek(0); // Возвращаем указатель файла в начало
+            in.readLine(); // Снова пропускаем заголовок
 
+            // Создаем вектор для хранения потоков обучения
+            QVector<TrainingThread*> threads;
+
+            // Счетчик обработанных строк для прогрессбара
             int processedLines = 0;
+
+            // Читаем файл построчно
             while (!in.atEnd()) {
                 QString line = in.readLine();
-                if (line.isEmpty()) continue; // Пропуск пустых строк
+                if (line.isEmpty()) continue; // Пропускаем пустые строки
 
                 QStringList values = line.split(",");
                 int correctNum = values.at(0).toInt();
 
+                // Считываем и нормализуем значения пикселей
                 QVector<double> readedData;
-                // Парсинг значений пикселей
                 for (int i = 1; i < values.size(); ++i) {
-                    readedData.append(values.at(i).toDouble() / 255.0); // Нормализация
+                    readedData.append(values.at(i).toDouble() / 255.0);
                 }
 
-                neuralNetwork->train(correctNum, readedData, currentActivationFunction);
+                // Создаем поток обучения и передаем ему данные
+                TrainingThread* thread = new TrainingThread(neuralNetwork, correctNum, readedData, currentActivationFunction);
+                threads.append(thread);
+                thread->start(); // Запускаем поток
 
-                // Обновление прогрессбара
+                // Обновляем прогрессбар
                 processedLines++;
                 int progress = (int)((double)processedLines / totalLines * 100);
-                infoLabel->setText(QString("%1 / %2 строк").arg(processedLines).arg(totalLines));
+                infoLabel->setText(QString("%1 из %2 строк уже обработано").arg(processedLines).arg(totalLines));
                 progressBar->setValue(progress);
-                QApplication::processEvents();
+                QApplication::processEvents(); // Обрабатываем события, чтобы прогрессбар обновился
             }
+
+            // Ожидаем завершения всех потоков
+            for (auto* thread : threads) {
+                thread->wait();
+                delete thread; // Освобождаем память после завершения потока
+            }
+
             file.close();
         }
 
-        progressDialog->close(); // Закрываем информационное окно после завершения
+        progressDialog->close(); // Закрываем информационное окно
     }
 }
 

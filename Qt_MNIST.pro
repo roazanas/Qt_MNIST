@@ -12,12 +12,14 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     neuralnetwork.cpp \
-    paintwidget.cpp
+    paintwidget.cpp \
+    trainingthread.cpp
 
 HEADERS += \
     mainwindow.h \
     neuralnetwork.h \
-    paintwidget.h
+    paintwidget.h \
+    trainingthread.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

@@ -63,12 +63,12 @@ QVector<double> NeuralNetwork::process(QVector<double> input)
     return neuronsOutput;
 }
 
-void NeuralNetwork::train(int correctNum, QVector<double> correctImage, ActivationFunction activation)
+void NeuralNetwork::train(int correctNum, QVector<double> correctImage)
 {
     feedForward(correctImage);
     QVector<double> correctOutput(sizeOutput, 0.0);
     correctOutput[correctNum] = 1.0;
-    backPropagation(correctOutput, activation);
+    backPropagation(correctOutput);
 }
 
 QVector<int> NeuralNetwork::getSizes()
@@ -150,7 +150,7 @@ void NeuralNetwork::feedForward(QVector<double> input)
     }
 }
 
-void NeuralNetwork::backPropagation(QVector<double> targetOutput, ActivationFunction activation)
+void NeuralNetwork::backPropagation(QVector<double> targetOutput)
 {
     double learningRate = 0.1;
 
